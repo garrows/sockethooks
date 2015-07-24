@@ -4,7 +4,7 @@
   "description": "Translate HTTP requests to socket messages. Cool for internet of things and connecting Pebble watches to robots.",
   "main": "app.js",
   "scripts": {
-    "postinstall": "gulp",
+    "postinstall": "bower install && gulp",
     "start": "node app.js",
     "test": "mocha tests"
   },
@@ -15,6 +15,7 @@
     "url": "https://github.com/garrows/sockethooks"
   },
   "devDependencies": {
+    "bower": "^1.4.1",
     "browserify": "^10.2.4",
     "gulp": "^3.9.0",
     "gulp-concat": "^2.6.0",
