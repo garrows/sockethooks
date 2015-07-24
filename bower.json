@@ -1,0 +1,23 @@
+{
+  "name": "sockethooks",
+  "version": "1.0.0",
+  "authors": [
+    "Glen Arrowsmith <glen.arrowsmith@gmail.com>"
+  ],
+  "description": "Securely send encrypted files over p2p",
+  "moduleType": [
+    "node"
+  ],
+  "license": "MIT",
+  "homepage": "http://sockethooks.garrows.com",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "semantic-ui": "~2.0.0"
+  }
+}
