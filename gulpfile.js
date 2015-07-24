@@ -6,7 +6,8 @@ var gulp = require('gulp'),
   less = require('gulp-less'),
   minifyCSS = require('gulp-minify-css'),
   concat = require('gulp-concat'),
-  uglify = require('gulp-uglify');
+  uglify = require('gulp-uglify'),
+  rename = require("gulp-rename");
 
 gulp.task('express', function() {
   require('./app');
@@ -43,7 +44,13 @@ gulp.task('minify-html', function() {
     .pipe(livereload());
 });
 
-gulp.task('less', function() {
+gulp.task('semantic-conf', function() {
+  return gulp.src(['./bower_components/semantic-ui/src/theme.config.example'])
+    .pipe(rename('theme.config'))
+    .pipe(gulp.dest('./bower_components/semantic-ui/src/'));
+});
+
+gulp.task('less', ['semantic-conf'], function() {
   return gulp.src('./src/index.less')
     //plumber
     .pipe(less({
@@ -55,8 +62,10 @@ gulp.task('less', function() {
 });
 
 gulp.task('images', function() {
-  return gulp.src(['./src/*.jpg', './src/*.png'], {base: './src'})
-  .pipe(gulp.dest('./public'));
+  return gulp.src(['./src/*.jpg', './src/*.png'], {
+      base: './src'
+    })
+    .pipe(gulp.dest('./public'));
 });
 
 gulp.task('js-libs', function() {
