@@ -1,11 +1,16 @@
 var io = require('socket.io-client');
 var socket = io('http://localhost:3030');
 
-var DEVICE_NAME = Math.floor(Math.random() * 10000);
+var DEVICE_NAME = 'tester';
+
+socket.emit('register', DEVICE_NAME);
 
 socket.on('connected', function(data) {
   console.log('connected', data);
-  socket.emit('register', DEVICE_NAME);
+});
+
+socket.on('registered', function(data) {
+  console.log('registered', data);
 });
 
 socket.on('data', function(data) {

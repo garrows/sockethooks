@@ -14,7 +14,8 @@ app.set('json spaces', 3);
 app.get('/devices', function(req, res) {
   res.json(devices);
 });
-app.get('/devices/:deviceId', function(req, res) {
+
+app.all('/devices/:deviceId', function(req, res) {
   var device = devices[req.params.deviceId];
   if (!device) {
 
@@ -26,10 +27,14 @@ app.get('/devices/:deviceId', function(req, res) {
       }
     }
     if (!device) {
-      res.status(404).send('Device not found');
+      res.status(404).send('Device not found. Did you remember to start your client?');
       return;
     }
   }
+
+  req.query = typeof req.query === 'object' ? req.query : {};
+  req.query['http-method'] = req.query['http-method'] ? req.query['http-method'] : req.method;
+
   var socket = sockets[device.id];
   socket.emit('data', req.query);
   res.json(device);
@@ -40,20 +45,19 @@ app.set('port', port);
 
 server.listen(port);
 
-// module.exports = app;
-var host = (process.env.SERVER || 'http://localhost') + ':' + (process.env.PORT || 3030);
+var host = (process.env.SERVER || 'http://sockethooks.garrows.com');
 server.on('listening', function() {
-  console.log('Started server ' + host);
+  console.log('Started server ' + host + ':' + port);
 });
 
 var devices = {};
 var sockets = {};
 io.on('connection', function(socket) {
-  console.log('Connection!', socket.id);
+  console.log('Connection', socket.id);
   devices[socket.id] = {
     id: socket.id,
     name: null,
-    url: host + '/devices/' + socket.id + '?a=1&b=2',
+    url: host + '/devices/' + socket.id + '?data1=one&data2=two',
     data: {}
   };
   sockets[socket.id] = socket;
@@ -61,17 +65,23 @@ io.on('connection', function(socket) {
   socket.emit('connected', {
     url: devices[socket.id].url
   });
+
   socket.on('register', function(data) {
-    console.log('register', data);
+    console.log('Registered', socket.id, data);
+    if (typeof data !== 'string') return console.warn('Bad register type', typeof data, data);
     devices[socket.id].name = data;
-    devices[socket.id].url = host + '/devices/' + data + '?a=1&b=2';
+    devices[socket.id].url = host + '/devices/' + data + '?data1=one&data2=two';
+    socket.emit('registered', {
+      url: devices[socket.id].url
+    });
   });
+
   socket.on('data', function(data) {
     console.log('data', data);
     devices[socket.id].data = data;
   });
   socket.on('disconnect', function() {
-    console.log('disconnected');
+    console.log('Disconnect', socket.id);
     delete devices[socket.id];
     delete sockets[socket.id];
   })
