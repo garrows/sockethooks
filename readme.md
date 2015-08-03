@@ -1,5 +1,7 @@
 # SocketHooks
 
+http://sockethooks.garrows.com
+
 Translate HTTP requests to socket messages.
 
 Cool for internet of things and connecting Pebble watches to robots.
@@ -12,26 +14,16 @@ Cool for internet of things and connecting Pebble watches to robots.
 var io = require('socket.io-client');
 var socket = io('http://sockethooks.garrows.com');
 
-var DEVICE_NAME = Math.floor(Math.random() * 10000);
+socket.emit('register', 'YOUR_NAME_HERE');
 
-socket.on('connected', function(data) {
-  console.log('Connected', data);
-  socket.emit('register', DEVICE_NAME);
+socket.on('registered', function(data) {
+  console.log('SocketHook ready. Go to', data.url);
 });
 
 socket.on('data', function(data) {
-  console.log('Got data:', data);
+  console.log('Your sockethook was hit:', data);
 });
-
-// Send some to the server
-var counter = 0;
-setInterval(function() {
-  socket.emit('data', {
-    counter: counter++,
-    random: Math.random()
-  });
-}, 2000);
 ```
 
 
-It should print out a url. Open that in your browser to send data and get the data its sent to you.
+Running the above code will print out a url which you can open in your browser to fire your SocketHook.
