@@ -16,7 +16,7 @@ gulp.task('express', function() {
   require('./app');
 });
 
-gulp.task('browserify', function() {
+gulp.task('browserify-bundle', function() {
   console.log('global.isDebug', global.isDebug);
   return browserify({
       entries: ['src/index.jsx'],
@@ -31,6 +31,23 @@ gulp.task('browserify', function() {
     .pipe(source('bundle.js'))
     .pipe(gulp.dest('./public/'))
     .pipe(livereload());
+});
+
+gulp.task('browserify', ['browserify-bundle'], function() {
+  if (global.isDebug) {
+    return gulp.src('./public/bundle.js ')
+      .pipe(rename('bundle.min.js'))
+      .pipe(gulp.dest('./public'));
+  } else {
+    return gulp.src('./public/bundle.js')
+      .pipe(uglify({
+        mangle: true,
+        compress: true
+      }))
+      .pipe(rename('bundle.min.js'))
+      .pipe(gulp.dest('./public'));
+  }
+
 });
 
 gulp.task('minify-html', function() {
@@ -87,29 +104,12 @@ gulp.task('js-libs', function() {
     .pipe(gulp.dest('public'));
 });
 
-gulp.task('minify-bundle', function() {
-  if (global.isDebug) {
-  return gulp.src('./public/bundle.js')
-    .pipe(rename('bundle.min.js'))
-    .pipe(gulp.dest('public'));
-  } else {
-    return gulp.src('./public/bundle.js')
-      .pipe(uglify({
-        mangle: true,
-        compress: true
-      }))
-      .pipe(rename('bundle.min.js'))
-      .pipe(gulp.dest('public'));
-  }
 
-});
-
-
-gulp.task('default', ['images', 'browserify', 'minify-bundle', 'less', 'js-libs', 'minify-html']);
+gulp.task('default', ['images', 'browserify', 'less', 'js-libs', 'minify-html']);
 
 gulp.task('run', ['isDebug', 'express', 'default'], function() {
   livereload.listen();
-  gulp.watch('src/*.js*', ['browserify', 'minify-bundle']);
+  gulp.watch('src/*.js*', ['browserify']);
   gulp.watch('src/*.less', ['less']);
   gulp.watch('src/*.html', ['minify-html']);
 });
