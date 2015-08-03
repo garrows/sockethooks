@@ -1,5 +1,6 @@
 var express = require('express');
 var path = require('path');
+var bodyParser = require('body-parser');
 var favicon = require('serve-favicon');
 var logger = require('morgan');
 
@@ -9,8 +10,13 @@ var io = require('socket.io')(server);
 
 //app.use(favicon(__dirname + '/public/favicon.ico'));
 app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({
+  extended: false
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 app.set('json spaces', 3);
+
 app.get('/devices', function(req, res) {
   res.json(devices);
 });
@@ -32,11 +38,12 @@ app.all('/devices/:deviceId', function(req, res) {
     }
   }
 
-  req.query = typeof req.query === 'object' ? req.query : {};
-  req.query['http-method'] = req.query['http-method'] ? req.query['http-method'] : req.method;
-
   var socket = sockets[device.id];
-  socket.emit('data', req.query);
+  socket.emit('data', {
+    method: req.method,
+    query: req.query,
+    body: req.body
+  });
   res.json(device);
 });
 
@@ -74,14 +81,37 @@ io.on('connection', function(socket) {
     socket.emit('registered', {
       url: devices[socket.id].url
     });
+
+    //Broadcast for homepage
+    io.sockets.emit(devices[socket.id].name, {
+      connected: true,
+      reason: 'connected'
+    });
+  });
+
+  //Homepage probing for connection status
+  socket.on('probe', function(data) {
+    var connected = Object.keys(devices).some(function(id) {
+      return devices[id].name === data;
+    });
+    console.log('probe', data, connected);
+    io.sockets.emit(data, {
+      connected: connected,
+      reason: 'probe'
+    });
   });
 
   socket.on('data', function(data) {
-    console.log('data', data);
+    // console.log('data', data);
     devices[socket.id].data = data;
   });
+
   socket.on('disconnect', function() {
     console.log('Disconnect', socket.id);
+    io.sockets.emit(devices[socket.id].name, {
+      connected: false,
+      reason: 'disconnect'
+    });
     delete devices[socket.id];
     delete sockets[socket.id];
   })
