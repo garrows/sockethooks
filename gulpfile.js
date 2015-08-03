@@ -9,14 +9,18 @@ var gulp = require('gulp'),
   uglify = require('gulp-uglify'),
   rename = require("gulp-rename");
 
+//Set to true in `gulp run`
+global.isDebug = false;
+
 gulp.task('express', function() {
   require('./app');
 });
 
 gulp.task('browserify', function() {
+  console.log('global.isDebug', global.isDebug);
   return browserify({
       entries: ['src/index.jsx'],
-      debug: true,
+      debug: global.isDebug,
       insertGlobals: true,
       cache: {},
       packageCache: {},
@@ -68,6 +72,10 @@ gulp.task('images', function() {
     .pipe(gulp.dest('./public'));
 });
 
+gulp.task('isDebug', function() {
+  global.isDebug = true;
+});
+
 gulp.task('js-libs', function() {
   return gulp.src([
       'bower_components/jquery/dist/jquery.min.js',
@@ -86,7 +94,7 @@ gulp.task('js-libs', function() {
 
 gulp.task('default', ['images', 'browserify', 'less', 'js-libs', 'minify-html']);
 
-gulp.task('run', ['express', 'default'], function() {
+gulp.task('run', ['isDebug', 'express', 'default'], function() {
   livereload.listen();
   gulp.watch('src/*.js*', ['browserify']);
   gulp.watch('src/*.less', ['less']);
