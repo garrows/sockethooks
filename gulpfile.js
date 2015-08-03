@@ -84,19 +84,32 @@ gulp.task('js-libs', function() {
     .pipe(concat('dependencies.js', {
       newLine: ';\n'
     }))
-    // .pipe(uglify({
-    //   mangle: false,
-    //   compress: false
-    // }))
     .pipe(gulp.dest('public'));
 });
 
+gulp.task('minify-bundle', function() {
+  if (global.isDebug) {
+  return gulp.src('./public/bundle.js')
+    .pipe(rename('bundle.min.js'))
+    .pipe(gulp.dest('public'));
+  } else {
+    return gulp.src('./public/bundle.js')
+      .pipe(uglify({
+        mangle: true,
+        compress: true
+      }))
+      .pipe(rename('bundle.min.js'))
+      .pipe(gulp.dest('public'));
+  }
 
-gulp.task('default', ['images', 'browserify', 'less', 'js-libs', 'minify-html']);
+});
+
+
+gulp.task('default', ['images', 'browserify', 'minify-bundle', 'less', 'js-libs', 'minify-html']);
 
 gulp.task('run', ['isDebug', 'express', 'default'], function() {
   livereload.listen();
-  gulp.watch('src/*.js*', ['browserify']);
+  gulp.watch('src/*.js*', ['browserify', 'minify-bundle']);
   gulp.watch('src/*.less', ['less']);
   gulp.watch('src/*.html', ['minify-html']);
 });
