@@ -30,7 +30,7 @@ var DeviceStatus = React.createClass({
             <a target="_blank" {...url}>{url}</a>
           </div>;
       } else {
-        output = <dev>Device not connected.</dev>;
+        output = <dev>Status: Device not connected.</dev>;
       }
       self.setState({
         connected: data.connected,
@@ -49,7 +49,7 @@ var DeviceStatus = React.createClass({
       connected: false,
       reason: 'uninitialized',
       output:
-      <dev>Device not connected.</dev>
+      <dev>Status: Device not connected.</dev>
     };
   },
   render: function() {
