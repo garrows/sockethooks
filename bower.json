@@ -4,7 +4,7 @@
   "authors": [
     "Glen Arrowsmith <glen.arrowsmith@gmail.com>"
   ],
-  "description": "Securely send encrypted files over p2p",
+  "description": "Translate HTTP requests to socket messages. Cool for internet of things and connecting Pebble watches to robots.",
   "moduleType": [
     "node"
   ],
