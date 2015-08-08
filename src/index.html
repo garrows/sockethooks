@@ -25,12 +25,12 @@
 
       <div class="ui message">
         <pre>
+var deviceName = <span id="device-name"></span>;
+
 var io = require('socket.io-client');
-var socket = io('http://sockethooks.garrows.com');
+var socket = io('http://sockethooks.garrows.com?name=' + deviceName);
 
-socket.emit('register', <span id="device-name"></span>);
-
-socket.on('registered', function(data) {
+socket.on('connected', function(data) {
   console.log('SocketHook ready. Go to', data.url);
 });
 

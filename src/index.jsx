@@ -1,7 +1,7 @@
 var React = window.React = require('react'),
   ls = require('local-storage'),
   io = require('socket.io-client'),
-  socket = io.connect();
+  socket = io.connect(window.location.origin + '/?name=browser-probe');
 
 var deviceName = ls('deviceName');
 if (!deviceName) {
@@ -40,6 +40,10 @@ var DeviceStatus = React.createClass({
     });
 
     socket.emit('probe', deviceName);
+
+    socket.on('data', function(data) {
+      console.log('browser-probe sockethook hit', data);
+    });
 
     return {
       connected: false,

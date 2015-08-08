@@ -21,30 +21,20 @@ app.get('/devices', function(req, res) {
   res.json(devices);
 });
 
-app.all('/devices/:deviceId', function(req, res) {
-  var device = devices[req.params.deviceId];
-  if (!device) {
+app.all('/devices/:deviceName', function(req, res) {
+  var device = devices[req.params.deviceName];
 
-    var deviceIds = Object.keys(devices);
-    for (var i = 0; i < deviceIds.length; i++) {
-      if (devices[deviceIds[i]].name == req.params.deviceId) {
-        device = devices[deviceIds[i]];
-        break;
-      }
-    }
-    if (!device) {
-      res.status(404).send('Device not found. Did you remember to start your client?');
-      return;
-    }
+  if (!device) {
+    res.status(404).send('Device not found. Did you remember to start your client?');
+    return;
   }
 
-  var socket = sockets[device.id];
-  socket.emit('data', {
+  device.socket.emit('data', {
     method: req.method,
     query: req.query,
     body: req.body
   });
-  res.json(device);
+  res.json(device.info);
 });
 
 var port = parseInt(process.env.PORT || 3030);
@@ -58,41 +48,46 @@ server.on('listening', function() {
 });
 
 var devices = {};
-var sockets = {};
-io.on('connection', function(socket) {
-  console.log('Connection', socket.id);
-  devices[socket.id] = {
-    id: socket.id,
-    name: null,
-    url: host + '/devices/' + socket.id + '?data1=one&data2=two',
-    data: {}
-  };
-  sockets[socket.id] = socket;
 
-  socket.emit('connected', {
-    url: devices[socket.id].url
+io.use(function(socket, next) {
+  socket.name = socket.request._query.name;
+
+  console.log('Connecting', socket.name);
+
+  if (!socket.name) return next(new Error('Device name required. Add \'?name=\''));
+
+  var server = 'http://' + (socket.request.headers.host || host);
+
+  devices[socket.name] = {
+    info: {
+      id: socket.id,
+      name: socket.name,
+      url: server + '/devices/' + socket.name
+    },
+    socket: socket
+  };
+
+  //Broadcast for homepage
+  io.sockets.emit(devices[socket.name].info.name, {
+    connected: true,
+    reason: 'connected'
   });
 
-  socket.on('register', function(data) {
-    console.log('Registered', socket.id, data);
-    if (typeof data !== 'string') return console.warn('Bad register type', typeof data, data);
-    devices[socket.id].name = data;
-    devices[socket.id].url = host + '/devices/' + data + '?data1=one&data2=two';
-    socket.emit('registered', {
-      url: devices[socket.id].url
-    });
+  next();
+});
 
-    //Broadcast for homepage
-    io.sockets.emit(devices[socket.id].name, {
-      connected: true,
-      reason: 'connected'
-    });
+io.on('connection', function(socket) {
+  console.log('Connection', socket.name);
+
+
+  socket.emit('connected', {
+    url: devices[socket.name].info.url
   });
 
   //Homepage probing for connection status
   socket.on('probe', function(data) {
     var connected = Object.keys(devices).some(function(id) {
-      return devices[id].name === data;
+      return devices[id].info.name === data;
     });
     console.log('probe', data, connected);
     io.sockets.emit(data, {
@@ -101,18 +96,13 @@ io.on('connection', function(socket) {
     });
   });
 
-  socket.on('data', function(data) {
-    // console.log('data', data);
-    devices[socket.id].data = data;
-  });
-
   socket.on('disconnect', function() {
-    console.log('Disconnect', socket.id);
-    io.sockets.emit(devices[socket.id].name, {
+    console.log('Disconnect', socket.name);
+    if (!devices[socket.name]) return console.warn('Cant find device', socket.id);
+    io.sockets.emit(devices[socket.name].info.name, {
       connected: false,
       reason: 'disconnect'
     });
-    delete devices[socket.id];
-    delete sockets[socket.id];
+    delete devices[socket.name];
   })
 });
