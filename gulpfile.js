@@ -7,13 +7,23 @@ var gulp = require('gulp'),
   minifyCSS = require('gulp-minify-css'),
   concat = require('gulp-concat'),
   uglify = require('gulp-uglify'),
-  rename = require("gulp-rename");
+  rename = require('gulp-rename'),
+  nodemon = require('gulp-nodemon');
 
 //Set to true in `gulp run`
 global.isDebug = false;
 
 gulp.task('express', function() {
-  require('./app');
+  // require('./app');
+  nodemon({
+    script: 'app.js',
+    ext: 'js'
+  }).on('restart', function() {
+    setTimeout(function() {
+      gulp.src('index.js')
+        .pipe(livereload())
+    }, 200);
+  })
 });
 
 gulp.task('browserify-bundle', function() {
