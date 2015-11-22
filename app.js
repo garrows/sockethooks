@@ -21,6 +21,19 @@ app.get('/devices', function(req, res) {
   res.json(devices);
 });
 
+app.get('/thing', function(req, res, next) {
+  //Hacky attempt for less code
+  req.request = req;
+  clientConnected(req, function(error, socket) {
+    if (error) next(error);
+    socket.send = function(eventName, data) {
+      data.event = eventName;
+      req.client.write(JSON.stringify(data));
+    };
+    clientPostConnection(socket);
+  });
+});
+
 app.all('/devices/:deviceName', function(req, res) {
   var device = devices[req.params.deviceName];
 
@@ -29,7 +42,7 @@ app.all('/devices/:deviceName', function(req, res) {
     return;
   }
 
-  device.socket.emit('data', {
+  device.socket.send('data', {
     method: req.method,
     query: req.query,
     body: req.body
@@ -49,8 +62,8 @@ server.on('listening', function() {
 
 var devices = {};
 
-io.use(function(socket, next) {
-  socket.name = socket.request._query.name;
+function clientConnected(socket, next) {
+  socket.name = (socket.request._query && socket.request._query.name) || (socket.request.query && socket.request.query.name);
 
   console.log('Connecting', socket.name);
 
@@ -73,14 +86,24 @@ io.use(function(socket, next) {
     reason: 'connected'
   });
 
-  next();
+  if (typeof next === 'function') next(null, socket);
+}
+
+io.use(function(socket, next) {
+  clientConnected(socket, function(error, socket) {
+    socket.send = function(eventName, data) {
+      data.event = eventName;
+      socket.emit(eventName, data);
+    };
+    return next(error, socket);
+  });
 });
 
-io.on('connection', function(socket) {
+function clientPostConnection(socket) {
   console.log('Connection', socket.name);
 
 
-  socket.emit('connected', {
+  socket.send('connected', {
     url: devices[socket.name].info.url
   });
 
@@ -96,7 +119,7 @@ io.on('connection', function(socket) {
     });
   });
 
-  socket.on('disconnect', function() {
+  function clientDisconnected() {
     console.log('Disconnect', socket.name);
     if (!devices[socket.name]) return console.warn('Cant find device', socket.id);
     io.sockets.emit(devices[socket.name].info.name, {
@@ -104,5 +127,43 @@ io.on('connection', function(socket) {
       reason: 'disconnect'
     });
     delete devices[socket.name];
-  })
+  }
+  socket.on('disconnect', clientDisconnected); //Socket.io
+  socket.on('close', clientDisconnected); //HTTP
+}
+
+io.on('connection', clientPostConnection);
+
+// server.on('request', function(request, response) {
+//   if (request.httpVersion === '3.0') {
+//     console.log('HTTP 3.0 client connected');
+//     response.writeHead(200, {
+//       'Content-Type': 'application/json'
+//     });
+//     response.write('{"okay":true}');
+//   }
+//   request.on('close', function() {
+//     console.log('HTTP 3.0 client disconnected');
+//   });
+// });
+// server.on('checkContinue', function(request, response) {
+//   console.log('checkContinue!!!!!!!!');
+// });
+// server.on('upgrade', function(request, socket, head) {
+//   console.log('upgrade!!!!!!!!');
+// });
+server.on('clientError', function(exception, socket) {
+  console.log('clientError!!!!!!!!', exception);
 });
+// var net = require('net');
+// var server = net.createServer(function(c) { //'connection' listener
+//   console.log('client connected');
+//   c.on('end', function() {
+//     console.log('client disconnected');
+//   });
+//   c.write('hello\r\n');
+//   c.pipe(c);
+// });
+// server.listen(port + 1, function() { //'listening' listener
+//   console.log('server bound');
+// });
