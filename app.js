@@ -17,7 +17,7 @@ app.use(bodyParser.urlencoded({
 app.use(function(req, res, next) {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
-  res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
   next();
 });
 app.use(express.static(path.join(__dirname, 'public')));
@@ -48,11 +48,13 @@ app.all('/devices/:deviceName', function(req, res) {
     return;
   }
 
-  device.socket.send('data', {
-    method: req.method,
-    query: req.query,
-    body: req.body
-  });
+  if (req.method !== 'OPTIONS') {
+    device.socket.send('data', {
+      method: req.method,
+      query: req.query,
+      body: req.body
+    });
+  }
   res.json(device.info);
 });
 
