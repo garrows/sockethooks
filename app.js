@@ -49,11 +49,13 @@ app.all('/devices/:deviceName', function(req, res) {
   }
 
   if (req.method !== 'OPTIONS') {
-    device.socket.send('data', {
-      method: req.method,
-      query: req.query,
-      body: req.body
-    });
+    Object.keys(device.clients).forEach(socketId=> {
+      device.clients[socketId].send('data', {
+        method: req.method,
+        query: req.query,
+        body: req.body
+      });
+    })
   }
   res.json(device.info);
 });
@@ -73,20 +75,22 @@ var devices = {};
 function clientConnected(socket, next) {
   socket.name = (socket.request._query && socket.request._query.name) || (socket.request.query && socket.request.query.name);
 
-  console.log('Connecting', socket.name);
+  console.log('Connecting', socket.id, socket.name);
 
   if (!socket.name) return next(new Error('Device name required. Add \'?name=\''));
 
   var server = 'http://' + (socket.request.headers.host || host);
 
-  devices[socket.name] = {
-    info: {
-      id: socket.id,
-      name: socket.name,
-      url: server + '/devices/' + socket.name
-    },
-    socket: socket
-  };
+  if (!devices[socket.name]) {
+    devices[socket.name] = {
+      info: {
+        name: socket.name,
+        url: server + '/devices/' + socket.name
+      },
+      clients:{},
+    };
+  }
+  devices[socket.name].clients[socket.id] = socket;
 
   //Broadcast for homepage
   io.sockets.emit(devices[socket.name].info.name, {
@@ -128,13 +132,16 @@ function clientPostConnection(socket) {
   });
 
   function clientDisconnected() {
-    console.log('Disconnect', socket.name);
-    if (!devices[socket.name]) return console.warn('Cant find device', socket.id);
+    console.log('Disconnect', socket.id, socket.name);
+    if (!devices[socket.name]) return console.warn('Cant find device', socket.name);
     io.sockets.emit(devices[socket.name].info.name, {
       connected: false,
       reason: 'disconnect'
     });
-    delete devices[socket.name];
+    delete devices[socket.name].clients[socket.id];
+    if (Object.keys(devices[socket.name].clients).length === 0) {
+      delete devices[socket.name];
+    }
   }
   socket.on('disconnect', clientDisconnected); //Socket.io
   socket.on('close', clientDisconnected); //HTTP
